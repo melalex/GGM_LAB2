@@ -3,27 +3,43 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.*;
 
+import static java.lang.Math.round;
+import static java.lang.Math.sqrt;
+
 @SuppressWarnings("serial")
 public class Main extends JPanel implements ActionListener {
-    private static final int WINDOW_WIDTH = 500;
-    private static final int WINDOW_HEIGHT = 500;
-    private static final int SCENE_X = 100;
-    private static final int SCENE_Y = 125;
+    private static final int WINDOW_WIDTH = 700;
+    private static final int WINDOW_HEIGHT = 700;
 
-    private static final int SCENE_WIDTH = 300;
-    private static final int SCENE_HEIGHT = 250;
+    private static final int SCENE_WIDTH = 225;
+    private static final int SCENE_HEIGHT = 175;
     private static final int MARGIN = 10;
     private static final int BOT_MARGIN = 50;
+    private static final int FRAME_LINE_WIDTH = 3;
     private static final int FACE_LINE_WIDTH = 3;
     private static final int EYE_LINE_WIDTH = 3;
     private static final int NOSE_LINE_WIDTH = 1;
     private static final int BOT_WIDTH = SCENE_WIDTH - 2 * (MARGIN + BOT_MARGIN) + 2 * FACE_LINE_WIDTH;
+    private static final int FRAME_SIDE = (int) round(sqrt(SCENE_WIDTH * SCENE_WIDTH + SCENE_HEIGHT * SCENE_HEIGHT));
 
     private static final int EYE_WIDTH = 80;
     private static final int EYE1_MARGIN = 30;
     private static final int EYE2_MARGIN = 40;
 
     private static final int NOSE_LAMBDA = 2;
+
+    private double angle = 0;
+
+    private double scale = 1;
+    private double delta = 0.01;
+
+    private double dx = 1;
+    private double tx = 0;
+    private double dy = 1;
+    private double ty = 6;
+
+    private static int maxWidth;
+    private static int maxHeight;
 
     private Main() {
     }
@@ -37,6 +53,7 @@ public class Main extends JPanel implements ActionListener {
         return instance;
     }
 
+    @Override
     public void paint(Graphics g) {
         Graphics2D g2d = (Graphics2D) g;
         RenderingHints rh = new RenderingHints(
@@ -49,8 +66,28 @@ public class Main extends JPanel implements ActionListener {
         );
         g2d.setRenderingHints(rh);
 
-        g2d.setBackground(Color.GREEN);
-        g2d.clearRect(SCENE_X, SCENE_Y, SCENE_WIDTH, SCENE_HEIGHT);
+        final int sceneX = maxWidth / 2;
+        final int sceneY = maxHeight / 2;
+
+        g2d.setBackground(Color.WHITE);
+        g2d.clearRect(0, 0, maxWidth, maxHeight);
+
+        BasicStroke frameStroke = new BasicStroke(FRAME_LINE_WIDTH, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
+        g2d.setStroke(frameStroke);
+        g2d.setColor(Color.BLACK);
+
+        g2d.drawRect(
+                sceneX - FRAME_SIDE,
+                sceneY - FRAME_SIDE,
+                2 * FRAME_SIDE,
+                2 * FRAME_SIDE
+        );
+
+        g2d.rotate(angle, sceneX, sceneY);
+        //g2d.scale(scale, 0.99);
+
+        g2d.setColor(Color.GREEN);
+        g2d.fillRect(sceneX, sceneY, SCENE_WIDTH, SCENE_HEIGHT);
 
         BasicStroke faceStroke = new BasicStroke(FACE_LINE_WIDTH, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
         g2d.setStroke(faceStroke);
@@ -58,16 +95,16 @@ public class Main extends JPanel implements ActionListener {
 
         g2d.drawPolyline(
                 new int[]{
-                        SCENE_X + MARGIN,
-                        SCENE_X + BOT_MARGIN + MARGIN,
-                        SCENE_X + BOT_WIDTH + BOT_MARGIN + MARGIN,
-                        SCENE_X + BOT_WIDTH + 2 * BOT_MARGIN
+                        sceneX + MARGIN,
+                        sceneX + BOT_MARGIN + MARGIN,
+                        sceneX + BOT_WIDTH + BOT_MARGIN + MARGIN,
+                        sceneX + BOT_WIDTH + 2 * BOT_MARGIN
                 },
-                new int[] {
-                        SCENE_Y + MARGIN,
-                        SCENE_Y + SCENE_HEIGHT - MARGIN,
-                        SCENE_Y + SCENE_HEIGHT - MARGIN,
-                        SCENE_Y + MARGIN
+                new int[]{
+                        sceneY + MARGIN,
+                        sceneY + SCENE_HEIGHT - MARGIN,
+                        sceneY + SCENE_HEIGHT - MARGIN,
+                        sceneY + MARGIN
                 },
                 4
         );
@@ -76,32 +113,32 @@ public class Main extends JPanel implements ActionListener {
         g2d.setStroke(eyeStroke);
         g2d.setColor(Color.BLUE);
 
-        final int endEye1X = SCENE_X + MARGIN + EYE_WIDTH;
+        final int endEye1X = sceneX + MARGIN + EYE_WIDTH;
         g2d.drawLine(
-                SCENE_X + MARGIN + EYE1_MARGIN,
-                SCENE_Y + MARGIN,
+                sceneX + MARGIN + EYE1_MARGIN,
+                sceneY + MARGIN,
                 endEye1X,
-                SCENE_Y + MARGIN
+                sceneY + MARGIN
         );
 
-        final int startEye2X = SCENE_X + SCENE_WIDTH - EYE2_MARGIN - EYE_WIDTH;
+        final int startEye2X = sceneX + SCENE_WIDTH - EYE2_MARGIN - EYE_WIDTH;
         g2d.drawLine(
                 startEye2X,
-                SCENE_Y + MARGIN,
-                SCENE_X + SCENE_WIDTH - EYE2_MARGIN - MARGIN,
-                SCENE_Y + MARGIN
+                sceneY + MARGIN,
+                sceneX + SCENE_WIDTH - EYE2_MARGIN - MARGIN,
+                sceneY + MARGIN
         );
 
         final int noseStartX = (endEye1X + startEye2X) / 2;
-        final int endNose1X = (int) divideLine(noseStartX, SCENE_Y + BOT_MARGIN + MARGIN, NOSE_LAMBDA);
-        final int endNose1Y = (int) divideLine(SCENE_Y + MARGIN, SCENE_Y + SCENE_HEIGHT - MARGIN, NOSE_LAMBDA);
-        final int endNose2X = (int) divideLine(noseStartX, SCENE_Y + BOT_WIDTH + BOT_MARGIN + MARGIN, NOSE_LAMBDA);
-        final int endNose2Y = (int) divideLine(SCENE_Y + MARGIN, SCENE_Y + SCENE_HEIGHT - MARGIN, NOSE_LAMBDA);
+        final int endNose1X = (int) divideLine(noseStartX, sceneY + BOT_MARGIN + MARGIN, NOSE_LAMBDA);
+        final int endNose1Y = (int) divideLine(sceneY + MARGIN, sceneY + SCENE_HEIGHT - MARGIN, NOSE_LAMBDA);
+        final int endNose2X = (int) divideLine(noseStartX, sceneY + BOT_WIDTH + BOT_MARGIN + MARGIN, NOSE_LAMBDA);
+        final int endNose2Y = (int) divideLine(sceneY + MARGIN, sceneY + SCENE_HEIGHT - MARGIN, NOSE_LAMBDA);
 
         BasicStroke noseStroke = new BasicStroke(NOSE_LINE_WIDTH, BasicStroke.CAP_BUTT, BasicStroke.JOIN_BEVEL);
         g2d.setStroke(noseStroke);
         GradientPaint gp = new GradientPaint(noseStartX,
-                SCENE_Y + MARGIN,
+                sceneY + MARGIN,
                 Color.YELLOW,
                 endNose2X,
                 endNose2Y,
@@ -111,7 +148,7 @@ public class Main extends JPanel implements ActionListener {
         g2d.setPaint(gp);
 
         Polygon nose = new Polygon();
-        nose.addPoint(noseStartX, SCENE_Y + MARGIN);
+        nose.addPoint(noseStartX, sceneY + MARGIN);
         nose.addPoint(endNose1X, endNose1Y);
         nose.addPoint(endNose2X, endNose2Y);
 
@@ -130,11 +167,19 @@ public class Main extends JPanel implements ActionListener {
         frame.setResizable(false);
         frame.add(create());
 
+        Dimension size = frame.getSize();
+        Insets insets = frame.getInsets();
+        maxWidth = size.width - insets.left - insets.right - 1;
+        maxHeight = size.height - insets.top - insets.bottom - 1;
+
         frame.setVisible(true);
     }
 
     @Override
     public void actionPerformed(ActionEvent actionEvent) {
+        scale += delta;
+        angle += 0.01;
 
+        repaint();
     }
 }
